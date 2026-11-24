@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application de Devis</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f3d4c">
+    <meta name="description" content="Créez des devis et exportez-les en PDF ou PNG, même sans connexion.">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Devis">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Capture l'invitation d'installation dès qu'elle est émise par le navigateur -->
+    <script>
+        window.__invitationInstallation = null;
+        window.addEventListener("beforeinstallprompt", function (e) {
+            e.preventDefault();
+            window.__invitationInstallation = e;
+            window.dispatchEvent(new Event("pwa-prete"));
+        });
+    </script>
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="topbar-contenu">
+        <h1 class="marque">Devis</h1>
+        <button type="button" id="btn-installer" class="btn-installer">Installer l'application</button>
+    </div>
+</header>
+
+<main class="page">
+
+    <!-- Progression -->
+    <ol class="etapes" id="etapes" aria-label="Progression">
+        <li data-etape="1"><span class="etape-pastille"></span><span class="etape-nom">Informations</span></li>
+        <li data-etape="2"><span class="etape-pastille"></span><span class="etape-nom">Articles</span></li>
+        <li data-etape="3"><span class="etape-pastille"></span><span class="etape-nom">Récapitulatif</span></li>
+    </ol>
+
+    <!-- ===== Étape 1 : créer un devis ===== -->
+    <section id="etape-1" class="ecran">
+        <h2>Créer un devis</h2>
+        <p class="intro">Tous les champs sont facultatifs : ceux que vous laissez vides n'apparaîtront pas sur le devis. Vous ajouterez les articles à l'étape suivante.</p>
+
+        <form id="form-infos" novalidate>
+
+            <fieldset class="groupe">
+                <legend>Client</legend>
+                <div class="champs deux-col">
+                    <div class="field">
+                        <label for="client-nom">Nom du client</label>
+                        <input type="text" id="client-nom" placeholder="Facultatif" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="client-contact">Téléphone ou e-mail</label>
+                        <input type="text" id="client-contact" placeholder="Facultatif" autocomplete="off">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="groupe">
+                <legend>Devis</legend>
+                <div class="champs deux-col">
+                    <div class="field pleine">
+                        <label for="devise">Devise</label>
+                        <select id="devise"></select>
+                    </div>
+                    <div class="field">
+                        <label for="numero">N° du devis</label>
+                        <input type="text" id="numero" placeholder="Facultatif" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="date">Date</label>
+                        <input type="date" id="date">
+                    </div>
+                    <div class="field">
+                        <label for="remise">Remise (%)</label>
+                        <input type="number" id="remise" min="0" max="100" step="any" placeholder="0" inputmode="decimal">
+                    </div>
+                    <div class="field">
+                        <label for="tva">TVA (%)</label>
+                        <input type="number" id="tva" min="0" max="100" step="any" placeholder="0" inputmode="decimal">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="groupe">
+                <legend>Votre entreprise</legend>
+                <div class="champs">
+                    <div class="field">
+                        <label for="entreprise-nom">Nom de l'entreprise</label>
+                        <input type="text" id="entreprise-nom" placeholder="Facultatif">
+                    </div>
+                    <div class="champs deux-col">
+                        <div class="field">
+                            <label for="entreprise-adresse">Adresse</label>
+                            <input type="text" id="entreprise-adresse" placeholder="Facultatif">
+                        </div>
+                        <div class="field">
+                            <label for="entreprise-contact">Téléphone ou e-mail</label>
+                            <input type="text" id="entreprise-contact" placeholder="Facultatif">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+                        <div class="actions actions-fin">
+                <button type="submit" class="btn btn-primary btn-large">Continuer</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ===== Étape 2 : matériels ===== -->
+    <section id="etape-2" class="ecran" hidden>
+        <h2>Articles du devis</h2>
+        <p class="intro" id="intro-client"></p>
+
+        <form id="form-materiel" class="formulaire-ajout" novalidate>
+            <h3 id="form-titre">Ajouter un article</h3>
+
+            <div class="champs ligne-materiel">
+                <div class="field">
+                    <label for="nom">Nom de l'article</label>
+                    <input type="text" id="nom" placeholder="Ex : Article ou prestation" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label for="quantite">Quantité</label>
+                    <input type="number" id="quantite" min="1" step="1" placeholder="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                    <label for="prix">Prix unitaire (<span id="devise-label"></span>)</label>
+                    <input type="number" id="prix" min="0" step="any" placeholder="0" inputmode="decimal">
+                </div>
+            </div>
+
+            <p id="erreur-materiel" class="erreur" role="alert" hidden></p>
+
+            <div class="actions">
+                <button type="submit" id="btn-valider-materiel" class="btn btn-primary">Ajouter</button>
+                <button type="button" id="btn-annuler" class="btn btn-secondary" hidden>Annuler</button>
+            </div>
+        </form>
+
+        <h3 class="titre-liste">Articles ajoutés</h3>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Désignation</th>
+                        <th class="nombre">Qté</th>
+                        <th class="nombre">Prix unitaire</th>
+                        <th class="nombre">Montant</th>
+                        <th><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody id="liste"></tbody>
+            </table>
+        </div>
+
+        <p class="resume-liste">
+            <span id="libelle-articles">Sous-total</span>
+            <strong id="apercu-total">0</strong>
+        </p>
+
+        <p id="erreur-liste" class="erreur" role="alert" hidden></p>
+
+        <div class="actions">
+            <button type="button" id="btn-retour" class="btn btn-secondary btn-large">Retour</button>
+            <button type="button" id="btn-soumettre" class="btn btn-primary btn-large">Valider le devis</button>
+        </div>
+    </section>
+
+</main>
+
+<!-- ===== Étape 3 : récapitulatif au premier plan ===== -->
+<dialog id="recap" class="recap" aria-labelledby="recap-titre">
+    <div class="recap-entete">
+        <h2 id="recap-titre">Récapitulatif du devis</h2>
+        <button type="button" id="btn-fermer" class="btn-icone" aria-label="Fermer le récapitulatif">&times;</button>
+    </div>
+
+    <div class="recap-corps">
+        <div id="recap-document" class="papier"></div>
+    </div>
+
+    <div class="recap-pied">
+        <p id="recap-statut" class="statut" role="status"></p>
+
+        <div class="recap-actions">
+            <div class="groupe-actions">
+                <button type="button" id="btn-modifier" class="btn btn-secondary">Modifier</button>
+                <button type="button" id="btn-nouveau" class="btn btn-secondary">Nouveau devis</button>
+            </div>
+            <div class="groupe-actions">
+                <button type="button" id="btn-png" class="btn btn-primary">Enregistrer en PNG</button>
+                <button type="button" id="btn-pdf" class="btn btn-accent">Enregistrer en PDF</button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<!-- ===== Aide à l'installation ===== -->
+<dialog id="dialog-install" class="dialog-install" aria-labelledby="install-titre">
+    <h2 id="install-titre">Installer l'application</h2>
+    <div id="install-corps"></div>
+    <div class="actions actions-fin">
+        <button type="button" id="btn-install-fermer" class="btn btn-primary">Fermer</button>
+    </div>
+</dialog>
+
+<script src="script.js"></script>
+</body>
+</html>
